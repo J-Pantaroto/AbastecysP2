@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class HistoricoAbastecimentosScreen extends StatelessWidget {
   final String veiculoId;
 
-  const HistoricoAbastecimentosScreen({Key? key, required this.veiculoId}) : super(key: key);
+  const HistoricoAbastecimentosScreen({Key? key, required this.veiculoId})
+      : super(key: key);
 
   Stream<QuerySnapshot> listarAbastecimentos() {
     return FirebaseFirestore.instance
