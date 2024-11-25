@@ -1,32 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/home_screen.dart';
 import '../screens/meus_veiculos_screen.dart';
-import '../screens/adicionar_editar_veiculo_screen.dart';
-import '../screens/historico_abastecimentos_screen.dart';
+import '../screens/abastecimentos_screen.dart';
 import '../screens/perfil_screen.dart';
 import '../screens/login_screen.dart';
 
 class DrawerWidget extends StatelessWidget {
-  const DrawerWidget({super.key});
-
-  Future<String?> obterVeiculoId() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return null;
-
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('veiculos')
-        .where('userId', isEqualTo: userId)
-        .limit(1)
-        .get();
-
-    if (querySnapshot.docs.isNotEmpty) {
-      return querySnapshot.docs.first.id;
-    } else {
-      return null;
-    }
-  }
+  const DrawerWidget({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -65,39 +46,8 @@ class DrawerWidget extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const AbastecimentosScreen(),
-              ),
+                  builder: (context) => const AbastecimentosScreen()),
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.add),
-            title: const Text('Adicionar Veículo'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const AdicionarEditarVeiculoScreen()),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Histórico de Abastecimentos'),
-            onTap: () async {
-              final veiculoId = await obterVeiculoId();
-
-              if (veiculoId != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        HistoricoAbastecimentosScreen(veiculoId: veiculoId),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Nenhum veículo encontrado')),
-                );
-              }
-            },
           ),
           ListTile(
             leading: const Icon(Icons.person),

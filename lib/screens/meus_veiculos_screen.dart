@@ -8,71 +8,60 @@ class MeusVeiculosScreen extends StatelessWidget {
   const MeusVeiculosScreen({Key? key}) : super(key: key);
 
   Stream<QuerySnapshot> listarVeiculos() {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final user = FirebaseAuth.instance.currentUser;
 
-    if (userId == null) {
-      print('Usuário não autenticado!');
+    if (user == null) {
+      debugPrint('Erro: usuário não autenticado.');
       return Stream.empty();
     }
 
     return FirebaseFirestore.instance
         .collection('veiculos')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
+        .where('email', isEqualTo: user.email)
         .snapshots();
   }
 
-  // Função para excluir o veículo
-  Future<void> excluirVeiculo(BuildContext context, String veiculoId) async {
-    final confirmarExclusao = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Excluir Veículo'),
-          content:
-              const Text('Tem certeza de que deseja excluir este veículo?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Excluir'),
-            ),
-          ],
-        );
-      },
-    );
+  Future<double> _calcularMediaConsumo(String veiculoId) async {
+    final abastecimentosSnapshot = await FirebaseFirestore.instance
+        .collection('veiculos')
+        .doc(veiculoId)
+        .collection('abastecimentos')
+        .orderBy('data')
+        .get();
 
-    if (confirmarExclusao == true) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('veiculos')
-            .doc(veiculoId)
-            .delete();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Veículo excluído com sucesso!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao excluir veículo: $e')),
-        );
-      }
+    if (abastecimentosSnapshot.docs.isEmpty) {
+      return 0.0;
     }
+
+    double consumoTotal = 0.0;
+    int quilometragemAnterior = 0;
+
+    for (var abastecimento in abastecimentosSnapshot.docs) {
+      final dados = abastecimento.data();
+      int quilometragemAtual = dados['quilometragemAtual'];
+      double litros = dados['litros'];
+
+      if (quilometragemAnterior != 0) {
+        consumoTotal += (quilometragemAtual - quilometragemAnterior) / litros;
+      }
+
+      quilometragemAnterior = quilometragemAtual;
+    }
+
+    return consumoTotal / abastecimentosSnapshot.docs.length; // Média
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Meus Veículos'),
+        title: const Text('Meus Veículos'),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: listarVeiculos(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -81,7 +70,7 @@ class MeusVeiculosScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('Nenhum veículo cadastrado.'));
+            return const Center(child: Text('Nenhum veículo cadastrado.'));
           }
 
           final veiculos = snapshot.data!.docs;
@@ -93,51 +82,52 @@ class MeusVeiculosScreen extends StatelessWidget {
               final veiculoId = veiculo.id;
               final dados = veiculo.data() as Map<String, dynamic>;
 
-              return ListTile(
-                leading: Icon(Icons.directions_car),
-                title: Text('${dados['nome']} (${dados['modelo']})'),
-                subtitle: Text('Placa: ${dados['placa']}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AdicionarEditarVeiculoScreen(
-                                veiculoId: veiculoId),
-                          ),
-                        );
-                      },
+              return FutureBuilder<double>(
+                future: _calcularMediaConsumo(veiculoId),
+                builder: (context, mediaSnapshot) {
+                  if (mediaSnapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  }
+
+                  final mediaConsumo = mediaSnapshot.data ?? 0.0;
+
+                  return ListTile(
+                    leading: const Icon(Icons.directions_car),
+                    title: Text('${dados['nome']} (${dados['modelo']})'),
+                    subtitle: Text(
+                      'Placa: ${dados['placa']} \nMédia: ${mediaConsumo.toStringAsFixed(2)} km/L',
                     ),
-                    IconButton(
-                      icon: Icon(Icons.article),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => HistoricoAbastecimentosScreen(
-                                veiculoId: veiculoId),
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        excluirVeiculo(context, veiculoId);
-                      },
-                    ),
-                  ],
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          HistoricoAbastecimentosScreen(veiculoId: veiculoId),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    AdicionarEditarVeiculoScreen(
+                                        veiculoId: veiculoId),
+                              ),
+                            );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.article),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    HistoricoAbastecimentosScreen(
+                                        veiculoId: veiculoId),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -147,7 +137,7 @@ class MeusVeiculosScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
         onPressed: () {
           Navigator.pushNamed(context, '/adicionar-veiculo');
         },

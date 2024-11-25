@@ -10,19 +10,30 @@ class AbastecimentosScreen extends StatefulWidget {
 }
 
 class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
-  final userId = FirebaseAuth.instance.currentUser?.uid;
+  final String? userEmail = FirebaseAuth.instance.currentUser?.email;
   final TextEditingController _litrosController = TextEditingController();
   final TextEditingController _quilometragemController =
       TextEditingController();
   String? _selectedVeiculoId;
+
   Future<void> _cadastrarAbastecimento() async {
     if (_selectedVeiculoId == null ||
         _litrosController.text.isEmpty ||
         _quilometragemController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha todos os campos!')),
+      );
       return;
     }
 
     try {
+      final userEmail = FirebaseAuth.instance.currentUser?.email;
+      if (userEmail == null) {
+        throw 'Usuário não autenticado!';
+      }
+
+      print('Cadastrando abastecimento para veículo ID: $_selectedVeiculoId');
+
       await FirebaseFirestore.instance
           .collection('veiculos')
           .doc(_selectedVeiculoId)
@@ -31,22 +42,31 @@ class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
         'litros': double.parse(_litrosController.text),
         'quilometragemAtual': int.parse(_quilometragemController.text),
         'data': FieldValue.serverTimestamp(),
+        'email': userEmail,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Abastecimento cadastrado com sucesso!')));
+        const SnackBar(content: Text('Abastecimento cadastrado com sucesso!')),
+      );
       _litrosController.clear();
       _quilometragemController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao cadastrar abastecimento: $e')));
+        SnackBar(content: Text('Erro ao cadastrar abastecimento: $e')),
+      );
+      print('Erro ao cadastrar abastecimento: $e');
     }
   }
 
   Stream<QuerySnapshot> _listarVeiculos() {
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    if (userEmail == null) {
+      return Stream.empty();
+    }
+
     return FirebaseFirestore.instance
         .collection('veiculos')
-        .where('userId', isEqualTo: userId)
+        .where('email', isEqualTo: userEmail)
         .snapshots();
   }
 
@@ -54,7 +74,7 @@ class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Abastecimentos'),
+        title: const Text('Abastecimentos'),
       ),
       body: Column(
         children: [
@@ -62,16 +82,16 @@ class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
             stream: _listarVeiculos(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator());
               }
 
               if (snapshot.hasError) {
-                return Center(child: Text('Erro ao carregar veículos'));
+                return const Center(child: Text('Erro ao carregar veículos'));
               }
 
-              final veiculos = snapshot.data!.docs;
+              final veiculos = snapshot.data?.docs ?? [];
               return DropdownButton<String>(
-                hint: Text("Selecione o veículo"),
+                hint: const Text("Selecione o veículo"),
                 value: _selectedVeiculoId,
                 onChanged: (value) {
                   setState(() {
@@ -93,7 +113,8 @@ class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
             child: TextField(
               controller: _litrosController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Litros abastecidos'),
+              decoration:
+                  const InputDecoration(labelText: 'Litros abastecidos'),
             ),
           ),
           Padding(
@@ -101,47 +122,13 @@ class _AbastecimentosScreenState extends State<AbastecimentosScreen> {
             child: TextField(
               controller: _quilometragemController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Quilometragem atual'),
+              decoration:
+                  const InputDecoration(labelText: 'Quilometragem atual'),
             ),
           ),
           ElevatedButton(
             onPressed: _cadastrarAbastecimento,
-            child: Text('Cadastrar Abastecimento'),
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('veiculos')
-                  .doc(_selectedVeiculoId)
-                  .collection('abastecimentos')
-                  .orderBy('data', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text('Erro ao carregar abastecimentos'));
-                }
-
-                final abastecimentos = snapshot.data!.docs;
-                return ListView.builder(
-                  itemCount: abastecimentos.length,
-                  itemBuilder: (context, index) {
-                    final abastecimento = abastecimentos[index];
-                    final dados = abastecimento.data() as Map<String, dynamic>;
-                    final data = (dados['data'] as Timestamp).toDate();
-                    return ListTile(
-                      title: Text(
-                          'Litros: ${dados['litros']} | Km: ${dados['quilometragemAtual']}'),
-                      subtitle:
-                          Text('Data: ${data.day}/${data.month}/${data.year}'),
-                    );
-                  },
-                );
-              },
-            ),
+            child: const Text('Cadastrar Abastecimento'),
           ),
         ],
       ),
