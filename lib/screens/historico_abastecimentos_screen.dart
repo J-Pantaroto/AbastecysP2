@@ -1,63 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class HistoricoAbastecimentosScreen extends StatelessWidget {
-  const HistoricoAbastecimentosScreen({super.key});
+  final String veiculoId;
+
+  const HistoricoAbastecimentosScreen({Key? key, required this.veiculoId}) : super(key: key);
+
+  Stream<QuerySnapshot> listarAbastecimentos() {
+    return FirebaseFirestore.instance
+        .collection('veiculos')
+        .doc(veiculoId)
+        .collection('abastecimentos')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Referência ao Firestore e ID do usuário logado
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final String? userId = FirebaseAuth.instance.currentUser?.uid;
-
-    // Verificar se o usuário está logado
-    if (userId == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Histórico de Abastecimentos'),
-        ),
-        body: const Center(
-          child: Text('Erro: Usuário não autenticado.'),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Histórico de Abastecimentos'),
+        title: Text('Histórico de Abastecimentos'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: firestore
-            .collection('users')
-            .doc(userId)
-            .collection('abastecimentos')
-            .orderBy('data', descending: true)
-            .snapshots(),
+        stream: listarAbastecimentos(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text('Nenhum abastecimento registrado.'),
-            );
+            return Center(child: Text('Nenhum abastecimento registrado.'));
           }
 
+          final abastecimentos = snapshot.data!.docs;
+
           return ListView.builder(
-            itemCount: snapshot.data!.docs.length,
+            itemCount: abastecimentos.length,
             itemBuilder: (context, index) {
-              final abastecimento = snapshot.data!.docs[index];
-              final DateTime dataAbastecimento =
-                  (abastecimento['data'] as Timestamp).toDate();
+              final abastecimento = abastecimentos[index];
+              final dados = abastecimento.data() as Map<String, dynamic>;
+
+              final data = (dados['data'] as Timestamp).toDate();
+              final litros = dados['quantidadeLitros'];
+              final quilometragem = dados['quilometragemAtual'];
 
               return ListTile(
-                title: Text(
-                  'Data: ${dataAbastecimento.toLocal().toString().substring(0, 16)}',
-                ),
+                leading: Icon(Icons.local_gas_station),
+                title: Text('Data: ${data.day}/${data.month}/${data.year}'),
                 subtitle: Text(
-                  'Litros: ${abastecimento['litros']} - KM: ${abastecimento['quilometragem']}',
+                  'Litros: $litros | Km: $quilometragem',
                 ),
               );
             },

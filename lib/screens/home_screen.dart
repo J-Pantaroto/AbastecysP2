@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'meus_veiculos_screen.dart';
-import 'adicionar_veiculo_screen.dart';
+import 'adicionar_editar_veiculo_screen.dart';
 import 'historico_abastecimentos_screen.dart';
 import 'perfil_screen.dart';
 import 'login_screen.dart';
@@ -43,24 +43,6 @@ class HomeScreen extends StatelessWidget {
               context,
               MaterialPageRoute(
                   builder: (context) => const MeusVeiculosScreen()),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.add),
-            title: const Text('Adicionar Veículo'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const AdicionarVeiculoScreen()),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Histórico de Abastecimentos'),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const HistoricoAbastecimentosScreen()),
             ),
           ),
           ListTile(
