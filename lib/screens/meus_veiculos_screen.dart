@@ -6,15 +6,15 @@ class MeusVeiculosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-    final String userId = "exampleUserId";
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    const String userId = "exampleUserId";
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meus Veículos'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
+        stream: firestore
             .collection('users')
             .doc(userId)
             .collection('veiculos')
@@ -38,7 +38,7 @@ class MeusVeiculosScreen extends StatelessWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () {
-                    _firestore
+                    firestore
                         .collection('users')
                         .doc(userId)
                         .collection('veiculos')

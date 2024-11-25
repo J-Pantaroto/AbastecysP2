@@ -8,7 +8,7 @@ class HistoricoAbastecimentosScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Referência ao Firestore e ID do usuário logado
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
     final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
     // Verificar se o usuário está logado
@@ -28,7 +28,7 @@ class HistoricoAbastecimentosScreen extends StatelessWidget {
         title: const Text('Histórico de Abastecimentos'),
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
+        stream: firestore
             .collection('users')
             .doc(userId)
             .collection('abastecimentos')
