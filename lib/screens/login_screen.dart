@@ -29,6 +29,62 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _showResetPasswordDialog() async {
+    final emailController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        title: const Text(
+          'Recuperar Senha',
+          style: TextStyle(color: Color(0xFFD0BCFF)),
+        ),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(
+            labelText: 'Digite seu e-mail',
+            labelStyle: TextStyle(color: Color(0xFFD0BCFF)),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFFD0BCFF)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar', style: TextStyle(color: Color(0xFFD0BCFF))),
+          ),
+          TextButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              if (email.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Por favor, insira um e-mail válido.')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              await _resetPassword(email);
+            },
+            child: const Text('Enviar', style: TextStyle(color: Color(0xFFD0BCFF))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPassword(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('E-mail de recuperação enviado!')),
+      );
+    } catch (e) {
+      _showError('Erro ao enviar e-mail de recuperação.');
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -43,8 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Senha incorreta.';
       case 'invalid-email':
         return 'E-mail inválido.';
-      case 'user-disabled':
-        return 'Usuário desativado. Entre em contato com o suporte.';
       default:
         return 'Erro desconhecido. Tente novamente.';
     }
@@ -57,6 +111,10 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         title: const Text('Login'),
         backgroundColor: const Color(0xFF6650A4),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -93,6 +151,17 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               onPressed: _login,
               child: const Text('Entrar'),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: _showResetPasswordDialog,
+              child: const Text(
+                'Esqueceu sua senha?',
+                style: TextStyle(
+                  color: Color(0xFFD0BCFF),
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
           ],
         ),
