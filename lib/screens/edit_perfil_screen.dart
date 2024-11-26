@@ -53,7 +53,6 @@ class _EditPerfilScreenState extends State<EditPerfilScreen> {
     });
 
     try {
-      // Verifica se o e-mail já está em uso
       if (newEmail != _user!.email && !(await _isEmailAvailable(newEmail))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('O e-mail informado já está em uso.')),

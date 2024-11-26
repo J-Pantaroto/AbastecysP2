@@ -62,24 +62,22 @@ class _AdicionarEditarVeiculoScreenState
       'modelo': _modeloController.text.trim(),
       'ano': _anoController.text.trim(),
       'placa': _placaController.text.trim(),
-      'email': user.email, // Salve o email do usuário
+      'email': user.email,
       'createdAt': FieldValue.serverTimestamp(),
     };
 
     try {
       if (widget.veiculoId == null) {
-        // Adicionar novo veículo
         await FirebaseFirestore.instance
             .collection('veiculos')
             .add(veiculoData);
       } else {
-        // Atualizar veículo existente
         await FirebaseFirestore.instance
             .collection('veiculos')
             .doc(widget.veiculoId)
             .update(veiculoData);
       }
-      Navigator.pop(context); // Voltar após salvar
+      Navigator.pop(context); 
     } catch (e) {
       debugPrint('Erro ao salvar veículo: $e');
     }

@@ -48,7 +48,35 @@ class MeusVeiculosScreen extends StatelessWidget {
       quilometragemAnterior = quilometragemAtual;
     }
 
-    return consumoTotal / abastecimentosSnapshot.docs.length; // Média
+    return consumoTotal / abastecimentosSnapshot.docs.length;
+  }
+
+  Future<void> _excluirVeiculo(BuildContext context, String veiculoId) async {
+    try {
+      final abastecimentosSnapshot = await FirebaseFirestore.instance
+          .collection('veiculos')
+          .doc(veiculoId)
+          .collection('abastecimentos')
+          .get();
+
+      for (var abastecimento in abastecimentosSnapshot.docs) {
+        await abastecimento.reference.delete();
+      }
+
+      await FirebaseFirestore.instance
+          .collection('veiculos')
+          .doc(veiculoId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veículo excluído com sucesso!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao excluir veículo: $e')),
+      );
+      debugPrint('Erro ao excluir veículo: $e');
+    }
   }
 
   @override
@@ -125,6 +153,36 @@ class MeusVeiculosScreen extends StatelessWidget {
                                         veiculoId: veiculoId),
                               ),
                             );
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          color: Colors.red,
+                          onPressed: () async {
+                            final confirmar = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Excluir Veículo'),
+                                content: const Text(
+                                    'Tem certeza que deseja excluir este veículo e todos os seus abastecimentos?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(false),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(true),
+                                    child: const Text('Excluir'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirmar == true) {
+                              await _excluirVeiculo(context, veiculoId);
+                            }
                           },
                         ),
                       ],

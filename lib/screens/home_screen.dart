@@ -10,7 +10,7 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Controle de Abastecimento'),
       ),
-      drawer: const DrawerWidget(), // Drawer atualizado
+      drawer: const DrawerWidget(),
       body: const Center(
         child: Text('Bem-vindo ao Controle de Abastecimento!'),
       ),
